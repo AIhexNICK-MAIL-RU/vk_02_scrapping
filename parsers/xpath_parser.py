@@ -20,9 +20,51 @@ class XPathParser:
             return match.group().strip()
         return None
 
+    # def _parse_product_page(self, tree):
+    #     result = {}
+    #     result['title'] = self._get_text_content(tree, '//title/text()')
+
+    #     return result
+
     def _parse_product_page(self, tree):
         result = {}
-        result['title'] = self._get_text_content(tree, '//title/text()')
+        
+        # Описание книги
+        description = self._get_text_content(tree, 
+            '//div[@class="sub-header"]/following-sibling::p/text()')
+        result['description'] = description if description else ''
+        
+        # Жанр (берем из URL категории)
+        category_url = self._get_text_content(tree, 
+            '//ul[@class="breadcrumb"]/li[3]/a/@href')
+        result['genre'] = category_url.split('/')[1] if category_url else ''
+        
+        # Цена
+        price = self._get_text_content(tree, 
+            '//p[@class="price_color"]/text()')
+        result['price'] = price if price else ''
+        
+        # Количество в наличии
+        availability = self._get_text_content(tree, 
+            '//p[@class="instock availability"]/text()')
+        if availability:
+            match = re.search(r'\((\d+)\)', availability)
+            result['stock_quantity'] = int(match.group(1)) if match else 0
+        else:
+            result['stock_quantity'] = 0
+        
+        # Рейтинг (количество звезд)
+        star_class = self._get_text_content(tree, 
+            '//p[@class="star-rating"]/@class')
+        if star_class:
+            star_map = {
+                'One': 1, 'Two': 2, 'Three': 3, 
+                'Four': 4, 'Five': 5
+            }
+            result['rating'] = star_map.get(star_class.split()[-1], 0)
+        else:
+            result['rating'] = 0
+        
         return result
 
     def _get_next_links(self, tree, cur_page_url):
